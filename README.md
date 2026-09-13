@@ -1,136 +1,198 @@
-# European Crab Detector
+# 🦀 Crab Vision — European Green Crab Detector
 
-A full-stack application for detecting European crabs in images and uniquely counting them across video files using AI computer vision.
+An AI-powered full-stack web application for detecting and counting **European green crabs** (*Carcinus maenas*) in images and tracking them uniquely across video footage. Built to support field researchers and environmental monitoring teams working on invasive species management.
+
+---
+
+## Features
+
+- **Image Analysis** — Upload a photo and receive bounding boxes drawn directly on the image for every European crab detected, along with confidence scores.
+- **Live Confidence Threshold** — Adjust the minimum detection confidence with a real-time slider. The canvas re-renders instantly — no re-uploads needed.
+- **All-class Detection** — European crabs are highlighted in cyan with bounding boxes. Other detected classes are listed separately in amber. 
+- **Video Tracking** — Upload a local video file or provide a direct URL. The Python worker tracks each crab uniquely across frames (counts each crab once).
+- **Privacy-first** — Media is sent only to your own configured Roboflow endpoint. API keys live only on the backend.
+
+---
 
 ## Architecture
 
-This project is a monorepo containing two distinct applications:
+This is a monorepo with two applications:
 
-- **`frontend/`**: A React Single Page Application built with Vite and Tailwind CSS.
-- **`backend/`**: A Node.js Express server that manages uploads, interfaces with the Roboflow API for images, and spawns a Python worker for video processing.
+| Layer | Tech |
+|---|---|
+| **Frontend** | React + Vite + Tailwind CSS |
+| **Backend** | Node.js + Express (single `server.js`) |
+| **AI** | Roboflow Serverless Workflows |
+| **Video Worker** | Python + OpenCV + `inference-sdk` |
 
 ### Directory Structure
 
 ```text
 /
-├── frontend/             # React SPA
-│   ├── src/              # React components and API library
-│   ├── public/           # Static assets
-│   └── netlify.toml      # Netlify deployment configuration
+├── frontend/               # React SPA (Vite)
+│   ├── src/
+│   │   ├── components/     # UI components (ImageResult, VideoResult, etc.)
+│   │   └── lib/api.js      # API client
+│   ├── index.html          # Entry point with SEO meta tags
+│   └── netlify.toml        # Netlify deploy config
 │
-├── backend/              # Express API
-│   ├── src/              # Routes, services, and middleware
-│   ├── worker/           # Python video processing worker
-│   ├── storage/          # Temporary uploads and processed video results
-│   └── Dockerfile        # Production Docker configuration
+├── backend/
+│   ├── src/
+│   │   └── server.js       # Single-file Express server (all routes + config)
+│   ├── worker/
+│   │   └── video_worker.py # Python video processor (tracking + counting)
+│   ├── storage/
+│   │   ├── uploads/        # Temporary upload staging (auto-deleted)
+│   │   └── results/        # Processed video output (24hr retention)
+│   └── Dockerfile
 ```
+
+---
 
 ## Prerequisites
 
-- **Node.js**: v20 or later
-- **npm**: v10 or later
-- **Python**: 3.8 or later (for the video worker)
-- **OpenCV System Dependencies**: Required for the Python worker (e.g., `libgl1-mesa-glx` on Linux)
-- **Roboflow API Key**: Required for the backend to access the tracking workflow.
+- **Node.js** v20+
+- **npm** v10+
+- **Python** 3.8+ (for video worker)
+- **Roboflow API Key** with access to your workflow
 
-## Local Installation
+---
 
-1. **Install Node dependencies** for the root, frontend, and backend:
-   ```bash
-   npm run install:all
-   ```
+## Setup
 
-2. **Install Python dependencies** for the backend worker:
-   ```bash
-   # Optional: Create a virtual environment first
-   # python -m venv venv && source venv/bin/activate
-   cd backend
-   pip install -r requirements.txt
-   cd ..
-   ```
+### 1. Install dependencies
 
-## Environment Configuration
+```bash
+npm run install:all
+```
 
-Copy the example environment files and fill in your details.
+Then install Python dependencies:
+```bash
+cd backend
+pip install -r requirements.txt
+```
 
-**Frontend** (`frontend/.env`):
+### 2. Configure environment
+
+**Frontend** — create `frontend/.env`:
 ```env
 VITE_API_BASE_URL=http://localhost:3001
 ```
 
-**Backend** (`backend/.env`):
+**Backend** — create `backend/.env`:
 ```env
+# Required
 ROBOFLOW_API_KEY=your_roboflow_api_key_here
-ROBOFLOW_WORKSPACE=your_workspace
-ROBOFLOW_PROJECT=your_project
-ROBOFLOW_VERSION=your_version
+ROBOFLOW_WORKFLOW_URL=https://serverless.roboflow.com/your-workspace/workflows/your-workflow-id
+
+# Server
 PORT=3001
 FRONTEND_ORIGINS=http://localhost:5173
+
+# Limits
 PYTHON_COMMAND=python3
 MAX_IMAGE_SIZE_MB=10
 MAX_VIDEO_SIZE_MB=500
 MAX_REMOTE_VIDEO_SIZE_MB=500
 VIDEO_JOB_RETENTION_HOURS=24
-VIDEO_JOB_CONCURRENCY=1
 VIDEO_PROCESSING_TIMEOUT_MINUTES=60
 ```
-*Note: Never commit your real API keys to version control.*
 
-## Development Commands
+> ⚠️ Never commit real API keys. Both `.env` files are in `.gitignore`.
 
-Run both the frontend and backend simultaneously in development mode:
+### 3. Run in development
+
 ```bash
 npm run dev
 ```
 
-Other available root scripts:
-- `npm run build`: Builds the frontend for production.
-- `npm run start:backend`: Starts the backend server.
-- `npm run clean`: Removes all `node_modules` and build directories.
+Starts the backend (nodemon) and the Vite frontend simultaneously.
 
-## API Overview
+---
 
-### Image API
-- `POST /api/images/detect`
-  - Accepts `multipart/form-data` with an `image` file.
-  - Proxies to the Roboflow API and filters results to `european_crab`.
-  - Returns normalized predictions and a base64 annotated image.
+## API Reference
 
-### Video-Job API
-- `POST /api/video-jobs/local`
-  - Accepts `multipart/form-data` with a `video` file.
-  - Returns HTTP 202 with a `jobId`.
-- `POST /api/video-jobs/url`
-  - Accepts JSON with a `videoUrl` (SSRF protected).
-  - Returns HTTP 202 with a `jobId`.
-- `GET /api/video-jobs/:jobId`
-  - Returns the current job status (`queued`, `running`, `completed`, `failed`).
-  - If `completed`, returns the unique crab count and a URL to the processed video.
+### Image Detection
 
-## Security Considerations
+```
+POST /api/images/detect
+Content-Type: multipart/form-data
 
-- **SSRF Protection**: The backend validates DNS resolution, rejects private IP ranges (including loopback and link-local), and enforces byte limits when downloading remote video URLs.
-- **No Frontend Secrets**: The Roboflow API key is stored only on the backend.
-- **Temporary Storage**: Uploaded source videos are deleted immediately after processing (pass or fail). Processed result videos are deleted after the configured retention period (default 24 hours).
+image: <file>          # must be image/*, max 10 MB
+```
+
+**Response:**
+```json
+{
+  "predictions": [
+    { "class": "european_crab", "confidence": 0.88, "x": 159, "y": 395, "width": 102, "height": 91 }
+  ],
+  "count": 3,
+  "annotatedImage": "data:image/jpeg;base64,..."
+}
+```
+
+All classes returned — filtering by threshold and highlighting happens client-side.
+
+### Video Jobs
+
+```
+POST /api/video-jobs/local        # multipart/form-data, video file, max 500 MB
+POST /api/video-jobs/url          # JSON body { videoUrl: "https://..." }
+GET  /api/video-jobs/:jobId       # Poll status: queued | running | completed | failed
+```
+
+### Health Check
+```
+GET /health   →  { status: "ok", timestamp: "..." }
+```
+
+---
+
+## Validation & Security
+
+| Check | Where |
+|---|---|
+| Image MIME type (`image/*`) | Backend multer `fileFilter` |
+| Video MIME type (`video/*`) | Backend multer `fileFilter` |
+| File size limits | Backend multer `limits` |
+| Rate limiting (100 req/15 min) | Backend `express-rate-limit` |
+| Invalid video URL | Backend 400 response |
+| CORS origin restriction | Backend `cors` middleware |
+| API key isolation | Backend only — never sent to frontend |
+
+Invalid file types (PDFs, executables, etc.) are rejected immediately with a `400` error before any data is processed.
+
+---
 
 ## Deployment
 
-### Netlify Frontend Deployment
-Connect the repository to Netlify and use these settings:
-- **Base directory**: `frontend`
-- **Build command**: `npm run build`
-- **Publish directory**: `dist`
-- **Environment variables**: Set `VITE_API_BASE_URL` to your deployed backend URL.
+### Frontend — Netlify
 
-### Render/Docker Backend Deployment
-Deploy the backend as a Docker service on Render (or similar):
-- **Root Directory**: `backend`
-- **Environment**: Docker
-- **Environment variables**: Set `ROBOFLOW_API_KEY`, `ROBOFLOW_WORKSPACE`, `ROBOFLOW_PROJECT`, `ROBOFLOW_VERSION`, and `FRONTEND_ORIGINS` (to your Netlify URL).
-- The provided `Dockerfile` installs Node, Python, ffmpeg, and all required system libraries.
+| Setting | Value |
+|---|---|
+| Base directory | `frontend` |
+| Build command | `npm run build` |
+| Publish directory | `dist` |
+| Env var | `VITE_API_BASE_URL=https://your-backend.com` |
 
-## Current Limitations
+### Backend — Docker / Render
 
-> **Note on Video Counting:** The video tracking integration uses the `inference-sdk` WebRTC API. Full validation of the unique crab counting logic requires representative European crab footage and a valid Roboflow API key. Before trusting the counts in a production environment, test with known-quantity footage.
+```bash
+cd backend
+docker build -t crab-vision-backend .
+docker run -p 3001:3001 --env-file .env crab-vision-backend
+```
 
-> **Note on Scaling:** The current video job queue uses an in-memory registry (`videoJobService.js`). For production environments with multiple backend instances, this must be replaced with a persistent datastore (like Redis/BullMQ) and object storage (like AWS S3) for the video files.
+Set these environment variables on your hosting platform:
+- `ROBOFLOW_API_KEY`
+- `ROBOFLOW_WORKFLOW_URL`
+- `FRONTEND_ORIGINS` (your Netlify URL)
+
+---
+
+## Known Limitations
+
+> **Video counting accuracy** depends on representative footage. The unique-crab tracking relies on the Roboflow `inference-sdk` tracker. Validate results with known-quantity footage before field deployment.
+
+> **In-memory job queue** — the video job registry lives in RAM. Server restarts clear all queued/running jobs. For production scale, replace with Redis/BullMQ and object storage (S3/GCS).

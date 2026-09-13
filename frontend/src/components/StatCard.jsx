@@ -6,7 +6,9 @@ export default function StatCard({ label, value, accent = "cyan" }) {
       </p>
       <p
         className={`mt-2 text-2xl font-bold ${
-          accent === "teal" ? "text-teal-300" : "text-cyan-300"
+          accent === "teal" ? "text-teal-300"
+          : accent === "red" ? "text-red-400"
+          : "text-cyan-300"
         }`}
       >
         {value}

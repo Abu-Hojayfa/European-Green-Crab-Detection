@@ -69,8 +69,10 @@ export default function App() {
 
   const chooseImage = useCallback((file) => {
     reset();
-    if (!file.type.startsWith("image/")) return setError("Please choose a supported image file.");
-    if (file.size > MAX_IMAGE_SIZE)        return setError("Image too large. Max 10 MB.");
+    if (!file.type.startsWith("image/"))
+      return setError(`"${file.name}" is not an image. Please upload a JPG, PNG, or WEBP file.`);
+    if (file.size > MAX_IMAGE_SIZE)
+      return setError(`Image too large (${(file.size/1024/1024).toFixed(1)} MB). Maximum allowed size is 10 MB.`);
     setSelectedImage(file);
   }, [reset]);
 
@@ -132,11 +134,30 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#050d18] text-slate-100 flex flex-col">
 
-      {/* ── Compact top nav ── */}
-      <header className="flex items-center gap-3 px-6 py-4 border-b border-white/5">
-        <span className="h-2 w-2 rounded-full bg-emerald-400" />
-        <span className="text-sm font-bold tracking-wide text-white">European Crab Detector</span>
-        <span className="ml-auto text-xs text-slate-600">Powered by Roboflow</span>
+      {/* ── Branded header ── */}
+      <header className="border-b border-white/5 bg-[#060e1a]/80 backdrop-blur-sm">
+        <div className="mx-auto flex max-w-3xl items-center gap-4 px-4 sm:px-8 py-4">
+          <div className="flex items-center gap-3">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/15 ring-1 ring-emerald-400/30">
+              <span className="text-lg">🦀</span>
+            </span>
+            <div>
+              <p className="text-sm font-bold tracking-wide text-white">Crab Vision</p>
+              <p className="text-[10px] text-slate-500 uppercase tracking-widest">European Green Crab Detector</p>
+            </div>
+          </div>
+          <a
+            href="https://github.com/Abu-Hojayfa"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="ml-auto flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-semibold text-slate-300 transition hover:border-emerald-400/30 hover:text-white"
+          >
+            <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
+            </svg>
+            Abu-Hojayfa
+          </a>
+        </div>
       </header>
 
       {/* ── Main content ── */}
@@ -247,6 +268,27 @@ export default function App() {
           )}
         </div>
       </main>
+
+      {/* ── Compact Info Section ── */}
+      <section className="mx-auto w-full max-w-3xl px-4 sm:px-8 pb-8">
+        <div className="rounded-2xl border border-white/5 bg-[#081525] p-5 text-sm text-slate-400 space-y-3">
+          <p className="flex gap-3 text-slate-300">
+            <span className="font-semibold text-emerald-400">Security & Privacy:</span> 
+            Media is processed directly through your configured API endpoint.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 sm:gap-8">
+             <p className="flex gap-2">
+                <span className="text-emerald-400">•</span> Unique tracking across video frames
+             </p>
+             <p className="flex gap-2">
+                <span className="text-emerald-400">•</span> Live threshold adjustments
+             </p>
+             <p className="flex gap-2">
+                <span className="text-emerald-400">•</span> Direct video URLs required
+             </p>
+          </div>
+        </div>
+      </section>
 
       <footer className="py-4 text-center text-xs text-slate-700">
         European Crab Detector · Secure browser-to-backend pipeline

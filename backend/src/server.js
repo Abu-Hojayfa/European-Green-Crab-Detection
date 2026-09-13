@@ -67,7 +67,14 @@ app.get("/health", (req, res) => {
 });
 
 // Image Upload
-const uploadImage = multer({ dest: config.uploadsDir, limits: { fileSize: config.maxImageSizeMb * 1024 * 1024 } });
+const uploadImage = multer({
+  dest: config.uploadsDir,
+  limits: { fileSize: config.maxImageSizeMb * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith("image/")) cb(null, true);
+    else cb(new Error("Invalid file type. Only images are allowed."));
+  }
+});
 app.post("/api/images/detect", uploadImage.single("image"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No image file provided." });
   
@@ -97,13 +104,11 @@ app.post("/api/images/detect", uploadImage.single("image"), async (req, res) => 
 
     // predictions can be an object with a nested predictions array
     const rawPredictions = item?.predictions?.predictions || item?.predictions || [];
-    const CONFIDENCE_THRESHOLD = 0.30;
-
     const predictions = (Array.isArray(rawPredictions) ? rawPredictions : [])
-      .filter(p => (p.class || p.class_name || "").toLowerCase() === "european_crab" && p.confidence >= CONFIDENCE_THRESHOLD)
       .map(p => ({
         x: p.x, y: p.y, width: p.width, height: p.height,
-        confidence: p.confidence, class: "european_crab",
+        confidence: p.confidence,
+        class: (p.class || p.class_name || "unknown").toLowerCase(),
         ...(p.tracker_id != null ? { tracker_id: p.tracker_id } : {}),
       }));
 
@@ -179,7 +184,14 @@ async function processJob(jobId) {
 }
 
 // Upload Local Video
-const uploadVideo = multer({ dest: config.uploadsDir, limits: { fileSize: config.maxVideoSizeMb * 1024 * 1024 } });
+const uploadVideo = multer({
+  dest: config.uploadsDir,
+  limits: { fileSize: config.maxVideoSizeMb * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith("video/")) cb(null, true);
+    else cb(new Error("Invalid file type. Only videos are allowed."));
+  }
+});
 app.post("/api/video-jobs/local", uploadVideo.single("video"), (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No video file provided." });
   const jobId = enqueueJob(req.file.path);
