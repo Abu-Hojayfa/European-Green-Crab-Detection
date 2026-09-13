@@ -2,12 +2,12 @@ FROM node:20-bullseye-slim
 
 # Install Python 3, pip, ffmpeg, and OpenCV system dependencies
 RUN apt-get update && apt-get install -y \
-    python3 \
-    python3-pip \
-    ffmpeg \
-    libgl1-mesa-glx \
-    libglib2.0-0 \
-    && rm -rf /var/lib/apt/lists/*
+  python3 \
+  python3-pip \
+  ffmpeg \
+  libgl1 \
+  libglib2.0-0 \
+  && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /app
@@ -25,7 +25,7 @@ COPY . .
 
 # Ensure storage directories exist and have proper permissions
 RUN mkdir -p storage/uploads storage/results && \
-    chmod -R 777 storage
+  chmod -R 777 storage
 
 # Expose the API port
 ENV PORT=3001
