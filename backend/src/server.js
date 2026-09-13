@@ -84,17 +84,29 @@ app.post("/api/images/detect", uploadImage.single("image"), async (req, res) => 
     if (!response.ok) throw new Error("Image analysis failed.");
 
     const data = await response.json();
-    let outputs = data?.outputs?.[0] || data?.result?.outputs?.[0] || data?.[0] || data || {};
-    
-    let rawPredictions = outputs.predictions || outputs.raw_model_predictions || outputs.tracked_predictions || [];
-    let flatPredictions = Array.isArray(rawPredictions) ? rawPredictions.flatMap((p) => Array.isArray(p?.predictions) ? p.predictions : [p]) : [];
-    
-    let predictions = flatPredictions.filter(p => (p.class || p.class_name || "").toLowerCase() === "european_crab").map(p => ({
-      x: p.x, y: p.y, width: p.width, height: p.height, confidence: p.confidence, class: "european_crab", ...(p.tracker_id != null ? { tracker_id: p.tracker_id } : {})
-    }));
 
-    let annotatedImage = outputs.output_image || null;
-    if (annotatedImage && !annotatedImage.startsWith("data:")) annotatedImage = `data:image/jpeg;base64,${annotatedImage}`;
+    // Actual response shape: [{ predictions: { predictions: [...] }, crab_count: N, output_image: { type, value } }]
+    const item = Array.isArray(data) ? data[0] : (data?.outputs?.[0] || data);
+
+    // predictions can be an object with a nested predictions array
+    const rawPredictions = item?.predictions?.predictions || item?.predictions || [];
+    const CONFIDENCE_THRESHOLD = 0.30;
+
+    const predictions = (Array.isArray(rawPredictions) ? rawPredictions : [])
+      .filter(p => (p.class || p.class_name || "").toLowerCase() === "european_crab" && p.confidence >= CONFIDENCE_THRESHOLD)
+      .map(p => ({
+        x: p.x, y: p.y, width: p.width, height: p.height,
+        confidence: p.confidence, class: "european_crab",
+        ...(p.tracker_id != null ? { tracker_id: p.tracker_id } : {}),
+      }));
+
+    // output_image can be { type: "base64", value: "..." } or a plain base64 string
+    const rawImage = item?.output_image;
+    let annotatedImage = null;
+    if (rawImage) {
+      const val = typeof rawImage === "object" ? rawImage.value : rawImage;
+      annotatedImage = val ? (val.startsWith("data:") ? val : `data:image/jpeg;base64,${val}`) : null;
+    }
 
     res.json({ predictions, count: predictions.length, annotatedImage });
   } catch (err) {

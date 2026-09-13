@@ -35,12 +35,23 @@ export default function App() {
   const [error, setError] = useState("");
   const [imageResult, setImageResult] = useState(null);
   const [videoResult, setVideoResult] = useState(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState("");
   const [videoPreviewUrl, setVideoPreviewUrl] = useState("");
   const [jobStatus, setJobStatus] = useState("");
 
   const abortRef = useRef(null);
 
   // Revoke object URLs properly
+  useEffect(() => {
+    if (!selectedImage) {
+      setImagePreviewUrl("");
+      return;
+    }
+    const url = URL.createObjectURL(selectedImage);
+    setImagePreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [selectedImage]);
+
   useEffect(() => {
     if (!selectedVideo) {
       setVideoPreviewUrl("");
@@ -228,7 +239,7 @@ export default function App() {
                       Annotated results from your image.
                     </p>
                   </div>
-                  <ImageResult result={imageResult} />
+                  <ImageResult result={imageResult} originalSrc={imagePreviewUrl} />
                   <button
                     onClick={() => { reset(); setSelectedImage(null); }}
                     className="w-full rounded-2xl border border-white/10 px-5 py-3 font-semibold text-slate-300 transition hover:border-cyan-300/40 hover:text-white"
