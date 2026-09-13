@@ -49,12 +49,18 @@ function drawBoxes(canvas, imageSrc, predictions) {
 
 /* ─── component ──────────────────────────────────────────── */
 export default function ImageResult({ result, originalSrc }) {
-  const [threshold, setThreshold] = useState(0.3);
+  const [threshold, setThreshold] = useState(0.5);
 
   const allPredictions      = result.predictions || [];
   const filtered            = allPredictions.filter(p => (p.confidence || 0) >= threshold);
   const europeanPredictions = filtered.filter(p => IS_EUROPEAN(p.class));
   const otherPredictions    = filtered.filter(p => !IS_EUROPEAN(p.class));
+
+  const groupedOtherPredictions = otherPredictions.reduce((acc, p) => {
+    const className = p.class.replace(/_/g, " ");
+    acc[className] = (acc[className] || 0) + 1;
+    return acc;
+  }, {});
 
   const canvasRef = useRef(null);
   useEffect(() => {
@@ -135,13 +141,15 @@ export default function ImageResult({ result, originalSrc }) {
           )}
 
           {/* Other detections */}
-          {otherPredictions.length > 0 && (
+          {Object.keys(groupedOtherPredictions).length > 0 && (
             <div className="space-y-1.5">
               <p className="text-[10px] font-bold uppercase tracking-widest text-amber-400">Other detections</p>
-              {otherPredictions.map((p, i) => (
+              {Object.entries(groupedOtherPredictions).map(([className, count], i) => (
                 <div key={i} className="flex items-center justify-between rounded-xl bg-amber-950/30 border border-amber-400/15 px-3 py-2 text-sm">
-                  <span className="text-amber-100">{p.class.replace(/_/g, " ")}</span>
-                  <span className="font-semibold text-amber-300">{Math.round((p.confidence || 0) * 100)}%</span>
+                  <span className="text-amber-100 capitalize">{className}</span>
+                  <span className="font-semibold text-amber-300">
+                    {count}
+                  </span>
                 </div>
               ))}
             </div>
