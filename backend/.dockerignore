@@ -1,0 +1,10 @@
+node_modules
+.env
+.env.*
+storage/uploads/*
+!storage/uploads/.gitkeep
+storage/results/*
+!storage/results/.gitkeep
+npm-debug.log
+__pycache__
+*.pyc
