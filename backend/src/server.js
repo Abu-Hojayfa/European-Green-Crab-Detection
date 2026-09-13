@@ -85,6 +85,13 @@ app.post("/api/images/detect", uploadImage.single("image"), async (req, res) => 
 
     const data = await response.json();
 
+    // ── Log the raw Roboflow response (truncate base64 blobs for readability) ──
+    const debugData = JSON.parse(JSON.stringify(data, (key, val) => {
+      if (typeof val === "string" && val.length > 200) return `[base64 ~${Math.round(val.length / 1024)}KB]`;
+      return val;
+    }));
+    console.log("[roboflow] Raw response:\n", JSON.stringify(debugData, null, 2));
+
     // Actual response shape: [{ predictions: { predictions: [...] }, crab_count: N, output_image: { type, value } }]
     const item = Array.isArray(data) ? data[0] : (data?.outputs?.[0] || data);
 

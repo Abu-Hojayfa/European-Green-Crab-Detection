@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { ArrowRight, Check, Info, ShieldCheck, Sparkles } from "lucide-react";
-import Header from "@/components/Header.jsx";
+import { ArrowRight } from "lucide-react";
 import InputTabs from "@/components/InputTabs.jsx";
 import ImageUploader from "@/components/ImageUploader.jsx";
 import LocalVideoUploader from "@/components/LocalVideoUploader.jsx";
@@ -17,108 +16,70 @@ import {
   resultFileUrl,
 } from "@/lib/api.js";
 
-const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
+const MAX_IMAGE_SIZE   = 10 * 1024 * 1024;
 const IMAGE_TIMEOUT_MS = 45_000;
-const ALLOWED_VIDEO_TYPES = [
-  "video/mp4",
-  "video/quicktime",
-  "video/webm",
-  "video/x-m4v",
-];
+const ALLOWED_VIDEO_TYPES = ["video/mp4", "video/quicktime", "video/webm", "video/x-m4v"];
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState("image");
-  const [selectedImage, setSelectedImage] = useState(null);
-  const [selectedVideo, setSelectedVideo] = useState(null);
-  const [videoUrl, setVideoUrl] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [imageResult, setImageResult] = useState(null);
-  const [videoResult, setVideoResult] = useState(null);
+  const [activeTab,       setActiveTab]       = useState("image");
+  const [selectedImage,   setSelectedImage]   = useState(null);
+  const [selectedVideo,   setSelectedVideo]   = useState(null);
+  const [videoUrl,        setVideoUrl]        = useState("");
+  const [loading,         setLoading]         = useState(false);
+  const [error,           setError]           = useState("");
+  const [imageResult,     setImageResult]     = useState(null);
+  const [videoResult,     setVideoResult]     = useState(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState("");
   const [videoPreviewUrl, setVideoPreviewUrl] = useState("");
-  const [jobStatus, setJobStatus] = useState("");
+  const [jobStatus,       setJobStatus]       = useState("");
 
   const abortRef = useRef(null);
 
-  // Revoke object URLs properly
   useEffect(() => {
-    if (!selectedImage) {
-      setImagePreviewUrl("");
-      return;
-    }
+    if (!selectedImage) { setImagePreviewUrl(""); return; }
     const url = URL.createObjectURL(selectedImage);
     setImagePreviewUrl(url);
     return () => URL.revokeObjectURL(url);
   }, [selectedImage]);
 
   useEffect(() => {
-    if (!selectedVideo) {
-      setVideoPreviewUrl("");
-      return;
-    }
+    if (!selectedVideo) { setVideoPreviewUrl(""); return; }
     const url = URL.createObjectURL(selectedVideo);
     setVideoPreviewUrl(url);
     return () => URL.revokeObjectURL(url);
   }, [selectedVideo]);
 
-  // Cleanup abort controller on unmount
-  useEffect(() => {
-    return () => {
-      if (abortRef.current) abortRef.current.abort();
-    };
-  }, []);
+  useEffect(() => () => { if (abortRef.current) abortRef.current.abort(); }, []);
 
   const cancelPending = useCallback(() => {
-    if (abortRef.current) {
-      abortRef.current.abort();
-      abortRef.current = null;
-    }
+    if (abortRef.current) { abortRef.current.abort(); abortRef.current = null; }
   }, []);
 
   const selectTab = useCallback((tab) => {
     cancelPending();
-    setActiveTab(tab);
-    setError("");
-    setImageResult(null);
-    setVideoResult(null);
-    setLoading(false);
-    setJobStatus("");
+    setActiveTab(tab); setError(""); setImageResult(null);
+    setVideoResult(null); setLoading(false); setJobStatus("");
   }, [cancelPending]);
 
   const reset = useCallback(() => {
     cancelPending();
-    setError("");
-    setImageResult(null);
-    setVideoResult(null);
-    setLoading(false);
-    setJobStatus("");
+    setError(""); setImageResult(null); setVideoResult(null);
+    setLoading(false); setJobStatus("");
   }, [cancelPending]);
 
-  const chooseImage = useCallback(
-    (file) => {
-      reset();
-      if (!file.type.startsWith("image/")) {
-        return setError("Please choose a supported image file.");
-      }
-      if (file.size > MAX_IMAGE_SIZE) {
-        return setError("This image is too large. Please choose a file under 10 MB.");
-      }
-      setSelectedImage(file);
-    },
-    [reset]
-  );
+  const chooseImage = useCallback((file) => {
+    reset();
+    if (!file.type.startsWith("image/")) return setError("Please choose a supported image file.");
+    if (file.size > MAX_IMAGE_SIZE)        return setError("Image too large. Max 10 MB.");
+    setSelectedImage(file);
+  }, [reset]);
 
-  const chooseVideo = useCallback(
-    (file) => {
-      reset();
-      if (!ALLOWED_VIDEO_TYPES.includes(file.type)) {
-        return setError("Please choose an MP4, MOV, WebM, or M4V video.");
-      }
-      setSelectedVideo(file);
-    },
-    [reset]
-  );
+  const chooseVideo = useCallback((file) => {
+    reset();
+    if (!ALLOWED_VIDEO_TYPES.includes(file.type))
+      return setError("Please choose an MP4, MOV, WebM, or M4V video.");
+    setSelectedVideo(file);
+  }, [reset]);
 
   const detect = useCallback(async () => {
     if (!selectedImage) return;
@@ -126,22 +87,14 @@ export default function App() {
     const controller = new AbortController();
     abortRef.current = controller;
     const timeout = window.setTimeout(() => controller.abort(), IMAGE_TIMEOUT_MS);
-
-    setLoading(true);
-    setError("");
+    setLoading(true); setError("");
     try {
-      const result = await detectImage(selectedImage, controller.signal);
-      setImageResult(result);
+      setImageResult(await detectImage(selectedImage, controller.signal));
     } catch (err) {
-      if (err instanceof DOMException && err.name === "AbortError") {
-        setError("The image request timed out. Please try again.");
-      } else {
-        setError(err instanceof Error ? err.message : "Image detection failed. Please try again.");
-      }
+      if (err?.name === "AbortError") setError("Request timed out. Please try again.");
+      else setError(err instanceof Error ? err.message : "Detection failed. Please try again.");
     } finally {
-      window.clearTimeout(timeout);
-      setLoading(false);
-      abortRef.current = null;
+      window.clearTimeout(timeout); setLoading(false); abortRef.current = null;
     }
   }, [selectedImage, cancelPending]);
 
@@ -149,247 +102,155 @@ export default function App() {
     cancelPending();
     const controller = new AbortController();
     abortRef.current = controller;
-
-    setLoading(true);
-    setError("");
-    setJobStatus("Uploading…");
-
+    setLoading(true); setError(""); setJobStatus("Uploading…");
     try {
-      let job;
-      if (activeTab === "local-video" && selectedVideo) {
-        job = await createLocalVideoJob(selectedVideo, controller.signal);
-      } else {
-        job = await createVideoUrlJob(videoUrl.trim(), controller.signal);
-      }
-
+      const job = activeTab === "local-video" && selectedVideo
+        ? await createLocalVideoJob(selectedVideo, controller.signal)
+        : await createVideoUrlJob(videoUrl.trim(), controller.signal);
       setJobStatus("Processing video…");
-
-      const finalJob = await pollVideoJob(
-        job.jobId,
-        (update) => {
-          if (update.status === "running") {
-            setJobStatus("Processing video… This may take several minutes.");
-          }
-        },
-        controller.signal
-      );
-
-      if (finalJob.status === "failed") {
-        setError(finalJob.error || "Video processing failed. Please try again.");
-      } else {
-        setVideoResult(finalJob);
-      }
+      const finalJob = await pollVideoJob(job.jobId, (u) => {
+        if (u.status === "running") setJobStatus("Processing… This may take several minutes.");
+      }, controller.signal);
+      if (finalJob.status === "failed") setError(finalJob.error || "Video processing failed.");
+      else setVideoResult(finalJob);
     } catch (err) {
-      if (!(err instanceof DOMException && err.name === "AbortError")) {
-        setError(err instanceof Error ? err.message : "Video processing failed. Please try again.");
-      }
+      if (!(err?.name === "AbortError")) setError(err instanceof Error ? err.message : "Video processing failed.");
     } finally {
-      setLoading(false);
-      setJobStatus("");
-      abortRef.current = null;
+      setLoading(false); setJobStatus(""); abortRef.current = null;
     }
   }, [activeTab, selectedVideo, videoUrl, cancelPending]);
 
   const submitVideo = useCallback(() => {
     if (activeTab === "local-video" && !selectedVideo) return;
-    if (activeTab === "video-url" && !/^https?:\/\//i.test(videoUrl.trim())) {
-      return setError("Enter a valid direct video URL beginning with http:// or https://.");
-    }
+    if (activeTab === "video-url" && !/^https?:\/\//i.test(videoUrl.trim()))
+      return setError("Enter a valid URL beginning with http:// or https://.");
     processVideo();
   }, [activeTab, selectedVideo, videoUrl, processVideo]);
 
+  const hasResult = imageResult || videoResult;
+
   return (
-    <main className="flex min-h-screen items-center bg-[#061321] text-slate-100">
-      <div className="mx-auto w-full max-w-6xl px-5 py-8 sm:px-8 sm:py-12 lg:py-16">
-        <Header />
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(340px,.9fr)] lg:items-start">
-          {/* Left panel */}
-          <section
-            className="rounded-[2rem] border border-[#29445a] bg-[#10263a] p-4 shadow-xl shadow-black/20 sm:p-6"
-            aria-label="Detection controls"
-          >
-            <InputTabs activeTab={activeTab} onChange={selectTab} />
-            <div className="mt-6">
-              {/* === IMAGE MODE === */}
-              {activeTab === "image" && !imageResult && (
-                <div className="space-y-5">
-                  <div>
-                    <h2 className="text-xl font-semibold text-white">Analyze an image</h2>
-                    <p className="mt-1 text-sm text-slate-400">
-                      Upload a clear image and our workflow will mark every European crab.
-                    </p>
-                  </div>
-                  <ImageUploader file={selectedImage} onFile={chooseImage} />
-                  <button
-                    disabled={!selectedImage || loading}
-                    onClick={detect}
-                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-cyan-300 px-5 py-4 font-bold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#102337]"
-                  >
-                    {loading ? "Detecting European crabs…" : "Detect European Crabs"}
-                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                  </button>
-                </div>
-              )}
+    <div className="min-h-screen bg-[#050d18] text-slate-100 flex flex-col">
 
-              {activeTab === "image" && imageResult && (
-                <div className="space-y-5">
-                  <div>
-                    <h2 className="text-xl font-semibold text-white">Detection complete</h2>
-                    <p className="mt-1 text-sm text-slate-400">
-                      Annotated results from your image.
-                    </p>
-                  </div>
-                  <ImageResult result={imageResult} originalSrc={imagePreviewUrl} />
-                  <button
-                    onClick={() => { reset(); setSelectedImage(null); }}
-                    className="w-full rounded-2xl border border-white/10 px-5 py-3 font-semibold text-slate-300 transition hover:border-cyan-300/40 hover:text-white"
-                  >
-                    Choose another image
-                  </button>
-                </div>
-              )}
+      {/* ── Compact top nav ── */}
+      <header className="flex items-center gap-3 px-6 py-4 border-b border-white/5">
+        <span className="h-2 w-2 rounded-full bg-emerald-400" />
+        <span className="text-sm font-bold tracking-wide text-white">European Crab Detector</span>
+        <span className="ml-auto text-xs text-slate-600">Powered by Roboflow</span>
+      </header>
 
-              {/* === VIDEO MODES === */}
-              {activeTab !== "image" && !videoResult && (
-                <div className="space-y-5">
-                  <div>
-                    <h2 className="text-xl font-semibold text-white">
-                      {activeTab === "local-video"
-                        ? "Track a local video"
-                        : "Track from a video URL"}
-                    </h2>
-                    <p className="mt-1 text-sm text-slate-400">
-                      {activeTab === "local-video"
-                        ? "Follow each crab across frames for a unique count."
-                        : "Send a public direct video file to the tracking workflow."}
-                    </p>
-                  </div>
+      {/* ── Main content ── */}
+      <main className="flex flex-1 items-start justify-center px-4 py-8 sm:px-8">
+        <div className="w-full max-w-3xl space-y-5">
 
-                  {activeTab === "local-video" ? (
-                    <LocalVideoUploader
-                      file={selectedVideo}
-                      previewUrl={videoPreviewUrl}
-                      onFile={chooseVideo}
-                    />
-                  ) : (
-                    <VideoUrlForm
-                      value={videoUrl}
-                      onChange={(value) => {
-                        setVideoUrl(value);
-                        setError("");
-                      }}
-                    />
-                  )}
+          {/* Mode tabs */}
+          <InputTabs activeTab={activeTab} onChange={selectTab} />
 
-                  <button
-                    disabled={
-                      (activeTab === "local-video" ? !selectedVideo : !videoUrl.trim()) ||
-                      loading
-                    }
-                    onClick={submitVideo}
-                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-cyan-300 px-5 py-4 font-bold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#102337]"
-                  >
-                    {loading
-                      ? "Processing and tracking video…"
-                      : activeTab === "local-video"
-                        ? "Count Unique European Crabs"
-                        : "Process Video URL"}
-                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                  </button>
-                </div>
-              )}
-
-              {activeTab !== "image" && videoResult && (
-                <div className="space-y-5">
-                  <div>
-                    <h2 className="text-xl font-semibold text-white">Tracking complete</h2>
-                    <p className="mt-1 text-sm text-slate-400">
-                      Your processed video is ready to review.
-                    </p>
-                  </div>
-                  <VideoResult
-                    result={videoResult}
-                    videoSrc={resultFileUrl(videoResult.videoUrl)}
-                  />
-                  <button
-                    onClick={() => { reset(); setSelectedVideo(null); setVideoUrl(""); }}
-                    className="w-full rounded-2xl border border-white/10 px-5 py-3 font-semibold text-slate-300 transition hover:border-cyan-300/40 hover:text-white"
-                  >
-                    Process another video
-                  </button>
-                </div>
-              )}
-
-              {/* Loading indicator */}
-              {loading && (
-                <div className="mt-5" aria-live="polite">
-                  <LoadingState
-                    message={
-                      activeTab === "image"
-                        ? "Detecting European crabs…"
-                        : jobStatus || "Processing and tracking video…"
-                    }
-                    detail={
-                      activeTab === "image"
-                        ? "Your image is being analyzed securely."
-                        : "This may take several minutes. Keep this page open."
-                    }
-                  />
-                </div>
-              )}
-
-              {/* Error display */}
-              {error && (
-                <div className="mt-5" aria-live="assertive">
-                  <ErrorAlert
-                    message={error}
-                    onRetry={activeTab === "image" ? detect : submitVideo}
-                  />
-                </div>
-              )}
+          {/* ── IMAGE MODE ── */}
+          {activeTab === "image" && !imageResult && (
+            <div className="rounded-2xl border border-white/8 bg-[#0c1929] p-6 space-y-5">
+              <div>
+                <h2 className="text-lg font-semibold text-white">Analyse an image</h2>
+                <p className="mt-1 text-sm text-slate-500">Upload a photo — the model will detect every European crab.</p>
+              </div>
+              <ImageUploader file={selectedImage} onFile={chooseImage} />
+              <button
+                disabled={!selectedImage || loading}
+                onClick={detect}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 px-5 py-3.5 font-semibold text-white transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+              >
+                {loading ? "Detecting…" : "Detect European Crabs"}
+                <ArrowRight className="h-4 w-4" aria-hidden />
+              </button>
             </div>
-          </section>
+          )}
 
-          {/* Right sidebar */}
-          <aside className="space-y-4 lg:w-full lg:max-w-md lg:justify-self-center lg:pt-20">
-            <div className="rounded-[2rem] border border-[#29445a] bg-[#10263a] p-6">
-              <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-300/10 text-teal-300">
-                  <Sparkles className="h-5 w-5" />
-                </span>
+          {activeTab === "image" && imageResult && (
+            <div className="rounded-2xl border border-white/8 bg-[#0c1929] p-6 space-y-5">
+              <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-semibold text-white">Built for field teams</p>
-                  <p className="text-sm text-slate-500">Fast, focused, private</p>
+                  <h2 className="text-lg font-semibold text-white">Detection complete</h2>
+                  <p className="text-sm text-slate-500">Bounding boxes drawn from model predictions.</p>
                 </div>
+                <button
+                  onClick={() => { reset(); setSelectedImage(null); }}
+                  className="rounded-xl border border-white/10 px-4 py-2 text-sm font-semibold text-slate-400 transition hover:border-emerald-400/40 hover:text-white"
+                >
+                  New image
+                </button>
               </div>
-              <div className="mt-6 space-y-4 text-sm text-slate-400">
-                <p className="flex gap-3">
-                  <Check className="h-5 w-5 shrink-0 text-teal-300" />
-                  Backend-powered image and video analysis
-                </p>
-                <p className="flex gap-3">
-                  <Check className="h-5 w-5 shrink-0 text-teal-300" />
-                  Unique tracking counts the same crab once
-                </p>
-                <p className="flex gap-3">
-                  <ShieldCheck className="h-5 w-5 shrink-0 text-teal-300" />
-                  Your media is sent only to your configured API
-                </p>
-              </div>
+              <ImageResult result={imageResult} originalSrc={imagePreviewUrl} />
             </div>
+          )}
 
-            <div className="flex gap-3 rounded-2xl border border-[#1b5264] bg-[#123047] p-4 text-sm leading-6 text-slate-400">
-              <Info className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300" />
-              Video URLs must point directly to a file. YouTube, Vimeo, Drive viewing pages, and
-              other webpage links are not supported.
+          {/* ── VIDEO MODES ── */}
+          {activeTab !== "image" && !videoResult && (
+            <div className="rounded-2xl border border-white/8 bg-[#0c1929] p-6 space-y-5">
+              <div>
+                <h2 className="text-lg font-semibold text-white">
+                  {activeTab === "local-video" ? "Track a local video" : "Track from a URL"}
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  {activeTab === "local-video"
+                    ? "Each crab is tracked across frames — counted only once."
+                    : "Provide a direct public video URL to process."}
+                </p>
+              </div>
+              {activeTab === "local-video"
+                ? <LocalVideoUploader file={selectedVideo} previewUrl={videoPreviewUrl} onFile={chooseVideo} />
+                : <VideoUrlForm value={videoUrl} onChange={(v) => { setVideoUrl(v); setError(""); }} />
+              }
+              <button
+                disabled={(activeTab === "local-video" ? !selectedVideo : !videoUrl.trim()) || loading}
+                onClick={submitVideo}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 px-5 py-3.5 font-semibold text-white transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+              >
+                {loading ? "Processing…" : activeTab === "local-video" ? "Count Unique Crabs" : "Process Video URL"}
+                <ArrowRight className="h-4 w-4" aria-hidden />
+              </button>
             </div>
-          </aside>
+          )}
+
+          {activeTab !== "image" && videoResult && (
+            <div className="rounded-2xl border border-white/8 bg-[#0c1929] p-6 space-y-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold text-white">Tracking complete</h2>
+                  <p className="text-sm text-slate-500">Processed video ready to review.</p>
+                </div>
+                <button
+                  onClick={() => { reset(); setSelectedVideo(null); setVideoUrl(""); }}
+                  className="rounded-xl border border-white/10 px-4 py-2 text-sm font-semibold text-slate-400 transition hover:border-emerald-400/40 hover:text-white"
+                >
+                  New video
+                </button>
+              </div>
+              <VideoResult result={videoResult} videoSrc={resultFileUrl(videoResult.videoUrl)} />
+            </div>
+          )}
+
+          {/* Loading */}
+          {loading && (
+            <div aria-live="polite">
+              <LoadingState
+                message={activeTab === "image" ? "Detecting European crabs…" : jobStatus || "Processing video…"}
+                detail={activeTab === "image" ? "Analysing your image securely." : "This may take several minutes. Keep this page open."}
+              />
+            </div>
+          )}
+
+          {/* Error */}
+          {error && (
+            <div aria-live="assertive">
+              <ErrorAlert message={error} onRetry={activeTab === "image" ? detect : submitVideo} />
+            </div>
+          )}
         </div>
+      </main>
 
-        <footer className="mt-10 text-center text-xs text-slate-600">
-          European Crab Detector · Secure browser-to-backend workflow
-        </footer>
-      </div>
-    </main>
+      <footer className="py-4 text-center text-xs text-slate-700">
+        European Crab Detector · Secure browser-to-backend pipeline
+      </footer>
+    </div>
   );
 }
