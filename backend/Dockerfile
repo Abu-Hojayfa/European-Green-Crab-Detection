@@ -1,12 +1,10 @@
-FROM node:20-bullseye-slim
+FROM node:20-slim
 
-# Install Python 3, pip, ffmpeg, and OpenCV system dependencies
-RUN apt-get update && apt-get install -y \
+# Install Python 3, pip, and ffmpeg (no libgl needed for opencv-python-headless)
+RUN apt-get update && apt-get install -y --no-install-recommends \
   python3 \
   python3-pip \
   ffmpeg \
-  libgl1 \
-  libglib2.0-0 \
   && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
@@ -16,9 +14,9 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev
 
-# Copy Python requirements and install
+# Copy Python requirements and install (allow breaking system packages in Debian 12 container)
 COPY requirements.txt ./
-RUN pip3 install --no-cache-dir -r requirements.txt
+RUN pip3 install --no-cache-dir --break-system-packages -r requirements.txt
 
 # Copy application source
 COPY . .
