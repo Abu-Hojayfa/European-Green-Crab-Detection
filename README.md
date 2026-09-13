@@ -178,7 +178,7 @@ The frontend is continuously deployed to Netlify: **[https://green-crab-detector
 | Base directory | `frontend` |
 | Build command | `npm run build` |
 | Publish directory | `dist` |
-| Env var | `VITE_API_BASE_URL=https://your-backend.com` |
+| Env var | `VITE_API_BASE_URL=https://european-green-crab-detection.onrender.com` |
 
 ### Backend — Docker / Render
 
