@@ -34,7 +34,7 @@ const config = {
   roboflowWorkflowUrl,
   roboflowWorkspace,
   roboflowWorkflow,
-  frontendOrigins: (process.env.FRONTEND_ORIGINS || "http://localhost:5173").split(",").map(o => o.trim()),
+  frontendOrigins: (process.env.FRONTEND_ORIGINS || "http://localhost:5173,https://green-crab-detector.netlify.app").split(",").map(o => o.trim()),
   pythonCommand: process.env.PYTHON_COMMAND || "python3",
   maxImageSizeMb: parseInt(process.env.MAX_IMAGE_SIZE_MB, 10) || 10,
   maxVideoSizeMb: parseInt(process.env.MAX_VIDEO_SIZE_MB, 10) || 500,

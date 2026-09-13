@@ -1,5 +1,7 @@
 # 🦀 Crab Vision — European Green Crab Detector
 
+**[Live Demo](https://green-crab-detector.netlify.app/)** | **[Frontend Repo](https://github.com/Abu-Hojayfa/European-Green-Crab-Detection/tree/main/frontend)**
+
 An AI-powered full-stack web application for detecting and counting **European green crabs** (*Carcinus maenas*) in images and tracking them uniquely across video footage. Built to support field researchers and environmental monitoring teams working on invasive species management.
 
 ---
@@ -168,6 +170,8 @@ Invalid file types (PDFs, executables, etc.) are rejected immediately with a `40
 ## Deployment
 
 ### Frontend — Netlify
+
+The frontend is continuously deployed to Netlify: **[https://green-crab-detector.netlify.app/](https://green-crab-detector.netlify.app/)**
 
 | Setting | Value |
 |---|---|
