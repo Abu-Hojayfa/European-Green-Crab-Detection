@@ -2,13 +2,17 @@ import { Link2 } from "lucide-react";
 
 export default function VideoUrlForm({ value, onChange }) {
   return (
-    <div>
-      <label htmlFor="video-url" className="mb-2 block text-sm font-semibold text-slate-200">
-        Public video URL
+    <div className="bg-surface-input p-4 border border-border-default">
+      <label
+        htmlFor="video-url"
+        className="mb-3 flex items-center gap-2 font-tech text-[10px] uppercase tracking-widest text-text-primary"
+      >
+        <span className="w-1.5 h-1.5 bg-accent"></span>
+        TARGET VIDEO URL
       </label>
       <div className="relative">
         <Link2
-          className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-500"
+          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary"
           aria-hidden="true"
         />
         <input
@@ -16,14 +20,13 @@ export default function VideoUrlForm({ value, onChange }) {
           type="url"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder="https://example.com/european-crabs.mp4"
-          className="w-full rounded-2xl border border-[#3a5a70] bg-[#091b2c] py-4 pl-12 pr-4 text-white placeholder:text-slate-600 focus:border-cyan-300/60 focus:outline-none focus:ring-2 focus:ring-cyan-300/20"
+          placeholder="HTTPS://..."
+          className="w-full border border-border-strong bg-surface-raised py-3 pl-10 pr-4 font-tech text-xs uppercase tracking-wider text-text-primary placeholder:text-text-ghost transition-colors focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
         />
       </div>
-      <p className="mt-3 text-sm leading-6 text-slate-500">
-        Enter a direct link to an MP4, MOV, WebM, or M4V file.{" "}
-        YouTube, Vimeo, and other video webpage links are <strong className="text-slate-400">not</strong> direct
-        video files and are not supported.
+      <p className="mt-3 font-tech text-[10px] uppercase leading-relaxed text-text-tertiary tracking-wider">
+        REQUIRES DIRECT LINK TO MP4, MOV, WEBM, OR M4V FILE.{" "}
+        <span className="text-danger-text">YOUTUBE/VIMEO PAGES NOT SUPPORTED.</span>
       </p>
     </div>
   );

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { CheckCircle2, ScanSearch, SlidersHorizontal, ShieldAlert } from "lucide-react";
 import StatCard from "./StatCard.jsx";
 
@@ -7,7 +7,7 @@ const IS_EUROPEAN = (cls) => (cls || "").toLowerCase() === "european_crab";
 /* ─── canvas drawing ─────────────────────────────────────── */
 function drawBoxes(canvas, imageSrc, predictions) {
   if (!canvas || !imageSrc) return;
-  const img = new Image();
+  const img = new window.Image();
   img.onload = () => {
     canvas.width  = img.naturalWidth;
     canvas.height = img.naturalHeight;
@@ -17,31 +17,51 @@ function drawBoxes(canvas, imageSrc, predictions) {
 
     let europeanIndex = 0;
     predictions.forEach((p) => {
-      if (!IS_EUROPEAN(p.class)) return;         // only European crabs get boxes
+      if (!IS_EUROPEAN(p.class)) return;
       europeanIndex++;
 
       const x   = p.x - p.width  / 2;
       const y   = p.y - p.height / 2;
       const pct = Math.round((p.confidence || 0) * 100);
 
-      // box
-      ctx.strokeStyle = "#22d3ee";               // cyan-400
+      // box — data color
+      ctx.strokeStyle = "#00D0FF";
       ctx.lineWidth   = Math.max(2, img.naturalWidth * 0.003);
       ctx.strokeRect(x, y, p.width, p.height);
 
+      // box corners accents
+      const cl = ctx.lineWidth * 3;
+      ctx.lineWidth = ctx.lineWidth * 2;
+      ctx.beginPath();
+      ctx.moveTo(x - cl, y); ctx.lineTo(x, y); ctx.lineTo(x, y - cl);
+      ctx.moveTo(x + p.width + cl, y); ctx.lineTo(x + p.width, y); ctx.lineTo(x + p.width, y - cl);
+      ctx.moveTo(x - cl, y + p.height); ctx.lineTo(x, y + p.height); ctx.lineTo(x, y + p.height + cl);
+      ctx.moveTo(x + p.width + cl, y + p.height); ctx.lineTo(x + p.width, y + p.height); ctx.lineTo(x + p.width, y + p.height + cl);
+      ctx.stroke();
+
       // label background
-      const font  = `bold ${Math.max(11, img.naturalWidth * 0.018)}px Inter, system-ui, sans-serif`;
+      const fontSize = Math.max(12, img.naturalWidth * 0.016);
+      const font  = `600 ${fontSize}px "Fira Code", ui-monospace, monospace`;
       ctx.font    = font;
-      const label = `#${europeanIndex} · ${pct}%`;
+      const label = `OBJ-${europeanIndex} [${pct}%]`;
       const tw    = ctx.measureText(label).width;
-      const pad   = 5;
-      const lh    = parseInt(font) + 4;
-      ctx.fillStyle = "#0e7490";
-      ctx.fillRect(x, y - lh - pad, tw + pad * 2, lh + pad);
+      const pad   = 6;
+      const lh    = fontSize + 4;
+
+      ctx.fillStyle = "rgba(3, 12, 20, 0.9)";
+      ctx.beginPath();
+      const lx = x;
+      const ly = y - lh - pad;
+      const lw = tw + pad * 2;
+      const lhh = lh + pad;
+      ctx.rect(lx, ly, lw, lhh);
+      ctx.fill();
+      ctx.lineWidth = 1;
+      ctx.strokeRect(lx, ly, lw, lhh);
 
       // label text
-      ctx.fillStyle = "#fff";
-      ctx.fillText(label, x + pad, y - pad - 2);
+      ctx.fillStyle = "#00D0FF";
+      ctx.fillText(label, x + pad, y - pad - 1);
     });
   };
   img.src = imageSrc;
@@ -63,78 +83,112 @@ export default function ImageResult({ result, originalSrc }) {
   }, {});
 
   const canvasRef = useRef(null);
+
   useEffect(() => {
     drawBoxes(canvasRef.current, originalSrc, filtered);
   }, [originalSrc, filtered]);
 
+  // Update CSS custom property for range track fill
+  const handleThreshold = useCallback((e) => {
+    const val = parseFloat(e.target.value);
+    setThreshold(val);
+    e.target.style.setProperty("--range-progress", `${val * 100}%`);
+  }, []);
+
+  const sliderRef = useRef(null);
+  useEffect(() => {
+    if (sliderRef.current) {
+      sliderRef.current.style.setProperty("--range-progress", `${threshold * 100}%`);
+    }
+  }, []);
+
   return (
-    <section className="space-y-5" aria-label="Image detection results">
+    <section className="space-y-4" aria-label="Image detection results">
 
       {/* ── Confidence Slider ── */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-white/8 bg-[#0d1f2e] px-4 py-3">
-        <div className="flex items-center gap-2 text-sm font-semibold text-slate-200">
-          <SlidersHorizontal className="h-4 w-4 text-emerald-400" />
-          Confidence threshold: <span className="text-emerald-400">{Math.round(threshold * 100)}%</span>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border border-border-strong bg-surface-overlay/60 px-4 py-3">
+        <div className="flex items-center gap-2 font-tech text-xs uppercase tracking-widest text-text-primary">
+          <SlidersHorizontal className="h-4 w-4 text-accent" />
+          CONFIDENCE LIMIT:
+          <span className="tabular-nums text-accent">
+            {Math.round(threshold * 100)}%
+          </span>
         </div>
         <input
+          ref={sliderRef}
           type="range" min="0" max="1" step="0.01" value={threshold}
-          onChange={(e) => setThreshold(parseFloat(e.target.value))}
-          className="w-full sm:w-48 accent-emerald-500"
+          onChange={handleThreshold}
+          className="w-full sm:w-52"
           aria-label="Confidence threshold"
         />
       </div>
 
       {/* ── Side-by-side images ── */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="flex flex-col gap-1.5">
-          <p className="text-center text-[10px] font-bold uppercase tracking-widest text-slate-500">Original</p>
-          <div className="overflow-hidden rounded-2xl border border-white/8 bg-[#060f1a]">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="flex flex-col gap-2">
+          <p className="font-tech text-[10px] uppercase tracking-widest text-text-tertiary">
+            [ RAW INPUT ]
+          </p>
+          <div className="overflow-hidden border border-border-strong bg-surface-input">
             {originalSrc
               ? <img src={originalSrc} alt="Original uploaded image" className="w-full object-contain" />
-              : <div className="flex h-32 items-center justify-center text-slate-600 text-xs">No preview</div>}
+              : <div className="flex h-32 items-center justify-center font-tech text-xs text-text-ghost uppercase">NO PREVIEW</div>}
           </div>
         </div>
 
-        <div className="flex flex-col gap-1.5">
-          <p className="text-center text-[10px] font-bold uppercase tracking-widest text-cyan-400">
-            Detected · {europeanPredictions.length} european
+        <div className="flex flex-col gap-2">
+          <p className="font-tech text-[10px] uppercase tracking-widest text-data">
+            [ DETECTED · {europeanPredictions.length} TARGETS ]
           </p>
-          <div className="overflow-hidden rounded-2xl border border-cyan-400/25 bg-[#060f1a] ring-1 ring-cyan-400/15">
+          <div className="overflow-hidden border border-border-strong bg-surface-input relative">
+
             {originalSrc
-              ? <canvas ref={canvasRef} className="w-full object-contain" style={{ display: "block" }} />
-              : <div className="flex h-32 items-center justify-center text-slate-600 text-xs">No image</div>}
+              ? <canvas ref={canvasRef} className="w-full object-contain relative z-10" style={{ display: "block" }} />
+              : <div className="flex h-32 items-center justify-center font-tech text-xs text-text-ghost uppercase">NO IMAGE</div>}
           </div>
         </div>
       </div>
 
+      {/* Screen-reader accessible detection summary */}
+      <div className="sr-only" aria-live="polite">
+        {europeanPredictions.length > 0
+          ? `${europeanPredictions.length} European green crab${europeanPredictions.length > 1 ? "s" : ""} detected above ${Math.round(threshold * 100)}% confidence.`
+          : `No European crabs detected above ${Math.round(threshold * 100)}% confidence.`}
+        {Object.entries(groupedOtherPredictions).map(([cls, count]) =>
+          `${count} ${cls} also detected.`
+        ).join(" ")}
+      </div>
+
       {/* ── Stats ── */}
       <div className="grid gap-3 sm:grid-cols-2">
-        <StatCard label="European crabs found" value={europeanPredictions.length} />
+        <StatCard label="TARGETS FOUND" value={europeanPredictions.length} accent="data" />
         <StatCard
-          label="Invasive status"
-          value={europeanPredictions.length > 0 ? "⚠ Invasive detected" : "✓ Clear"}
-          accent={europeanPredictions.length > 0 ? "red" : "teal"}
+          label="INVASIVE STATUS"
+          value={europeanPredictions.length > 0 ? "⚠ INVASIVE" : "✓ CLEAR"}
+          accent={europeanPredictions.length > 0 ? "danger" : "accent"}
         />
       </div>
 
       {/* ── Detection list ── */}
       {filtered.length > 0 ? (
-        <div className="rounded-2xl border border-white/8 bg-[#0d1f2e] p-4 space-y-4">
-          <div className="flex items-center gap-2 text-sm font-semibold text-slate-200">
-            <ScanSearch className="h-4 w-4 text-emerald-400" />
-            All detections ({filtered.length})
+        <div className="border border-border-strong bg-surface-overlay/40 p-4 space-y-4">
+          <div className="flex items-center gap-2 font-tech text-xs uppercase tracking-widest text-text-primary">
+            <ScanSearch className="h-4 w-4 text-accent" />
+            DETECTION LOG ({filtered.length})
           </div>
 
           {/* European crabs */}
           {europeanPredictions.length > 0 && (
-            <div className="space-y-1.5">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-cyan-400 flex items-center gap-1.5">
-                <ShieldAlert className="h-3 w-3" /> European green crab (invasive)
+            <div className="space-y-2 max-h-64 overflow-y-auto custom-scrollbar pr-2">
+              <p className="flex items-center gap-2 font-tech text-[10px] font-bold uppercase tracking-widest text-data">
+                <ShieldAlert className="h-3 w-3" /> EUROPEAN GREEN CRAB (INVASIVE)
               </p>
               {europeanPredictions.map((p, i) => (
-                <div key={i} className="flex items-center justify-between rounded-xl bg-cyan-950/40 border border-cyan-400/15 px-3 py-2 text-sm">
-                  <span className="text-cyan-100">Crab #{i + 1}</span>
-                  <span className="font-semibold text-cyan-300">{Math.round((p.confidence || 0) * 100)}%</span>
+                <div key={i} className="flex items-center justify-between border-l-2 border-data bg-data-muted px-3 py-2 font-tech text-xs uppercase text-text-primary">
+                  <span>OBJ-{i + 1}</span>
+                  <span className="tabular-nums text-data">
+                    {Math.round((p.confidence || 0) * 100)}%
+                  </span>
                 </div>
               ))}
             </div>
@@ -142,13 +196,15 @@ export default function ImageResult({ result, originalSrc }) {
 
           {/* Other detections */}
           {Object.keys(groupedOtherPredictions).length > 0 && (
-            <div className="space-y-1.5">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-amber-400">Other detections</p>
+            <div className="space-y-2 pt-2 max-h-64 overflow-y-auto custom-scrollbar pr-2">
+              <p className="font-tech text-[10px] font-bold uppercase tracking-widest text-warning-text">
+                OTHER DETECTIONS
+              </p>
               {Object.entries(groupedOtherPredictions).map(([className, count], i) => (
-                <div key={i} className="flex items-center justify-between rounded-xl bg-amber-950/30 border border-amber-400/15 px-3 py-2 text-sm">
-                  <span className="text-amber-100 capitalize">{className}</span>
-                  <span className="font-semibold text-amber-300">
-                    {count}
+                <div key={i} className="flex items-center justify-between border-l-2 border-warning-text bg-warning-muted px-3 py-2 font-tech text-xs uppercase text-text-primary min-w-0">
+                  <span className="truncate min-w-0 mr-2">{className}</span>
+                  <span className="tabular-nums text-warning-text">
+                    x{count}
                   </span>
                 </div>
               ))}
@@ -156,9 +212,9 @@ export default function ImageResult({ result, originalSrc }) {
           )}
         </div>
       ) : (
-        <div className="flex items-center gap-3 rounded-2xl border border-emerald-300/20 bg-emerald-950/30 p-4 text-emerald-100">
-          <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0" />
-          No detections above {Math.round(threshold * 100)}% confidence.
+        <div className="flex items-center gap-3 border border-accent/50 bg-accent-muted px-4 py-3 font-tech text-xs uppercase tracking-wider text-text-primary">
+          <CheckCircle2 className="h-4 w-4 text-accent shrink-0" />
+          NO DETECTIONS ABOVE {Math.round(threshold * 100)}% LIMIT.
         </div>
       )}
     </section>

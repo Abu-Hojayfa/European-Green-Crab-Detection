@@ -1,16 +1,16 @@
-export default function StatCard({ label, value, accent = "cyan" }) {
+export default function StatCard({ label, value, accent = "data" }) {
+  const accentStyles = {
+    data:    "text-data",
+    accent:  "text-accent",
+    danger:  "text-danger",
+  };
+
   return (
-    <div className="rounded-2xl border border-[#29445a] bg-[#142c41] p-4">
-      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+    <div className={`border border-border-default bg-surface-overlay/30 px-4 py-3 ${accentStyles[accent] || accentStyles.data}`}>
+      <p className="font-tech text-[10px] uppercase tracking-[0.2em] text-text-secondary">
         {label}
       </p>
-      <p
-        className={`mt-2 text-2xl font-bold ${
-          accent === "teal" ? "text-teal-300"
-          : accent === "red" ? "text-red-400"
-          : "text-cyan-300"
-        }`}
-      >
+      <p className="mt-1 font-tech text-2xl font-bold tracking-tight">
         {value}
       </p>
     </div>

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Shield, Crosshair, Radar } from "lucide-react";
 import InputTabs from "@/components/InputTabs.jsx";
 import ImageUploader from "@/components/ImageUploader.jsx";
 import LocalVideoUploader from "@/components/LocalVideoUploader.jsx";
@@ -50,6 +50,19 @@ export default function App() {
   }, [selectedVideo]);
 
   useEffect(() => () => { if (abortRef.current) abortRef.current.abort(); }, []);
+
+  // Keyboard shortcut (Cmd+U or Ctrl+U) to trigger upload
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'u') {
+        e.preventDefault();
+        const fileInput = document.querySelector('input[type="file"]');
+        if (fileInput) fileInput.click();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const cancelPending = useCallback(() => {
     if (abortRef.current) { abortRef.current.abort(); abortRef.current = null; }
@@ -104,14 +117,14 @@ export default function App() {
     cancelPending();
     const controller = new AbortController();
     abortRef.current = controller;
-    setLoading(true); setError(""); setJobStatus("Uploading…");
+    setLoading(true); setError(""); setJobStatus("Uploading...");
     try {
       const job = activeTab === "local-video" && selectedVideo
         ? await createLocalVideoJob(selectedVideo, controller.signal)
         : await createVideoUrlJob(videoUrl.trim(), controller.signal);
-      setJobStatus("Processing video…");
+      setJobStatus("Processing video...");
       const finalJob = await pollVideoJob(job.jobId, (u) => {
-        if (u.status === "running") setJobStatus("Processing… This may take several minutes.");
+        if (u.status === "running") setJobStatus("Processing... This may take several minutes.");
       }, controller.signal);
       if (finalJob.status === "failed") setError(finalJob.error || "Video processing failed.");
       else setVideoResult(finalJob);
@@ -129,75 +142,86 @@ export default function App() {
     processVideo();
   }, [activeTab, selectedVideo, videoUrl, processVideo]);
 
-  const hasResult = imageResult || videoResult;
-
   return (
-    <div className="min-h-screen bg-[#050d18] text-slate-100 flex flex-col">
-
-      {/* ── Branded header ── */}
-      <header className="border-b border-white/5 bg-[#060e1a]/80 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-3xl items-center gap-4 px-4 sm:px-8 py-4">
+    <div className="min-h-screen flex flex-col bg-surface-base">
+      {/* ── Technical Header ── */}
+      <header className="border-b border-border-default bg-surface-raised relative z-20">
+        <div className="mx-auto flex w-full max-w-[1200px] items-center gap-4 px-4 py-3">
           <div className="flex items-center gap-3">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/15 ring-1 ring-emerald-400/30">
-              <span className="text-lg">🦀</span>
+            <span className="flex h-8 w-8 items-center justify-center border border-accent/40 bg-accent/10">
+              <Radar className="h-4 w-4 text-accent" />
             </span>
             <div>
-              <p className="text-sm font-bold tracking-wide text-white">Crab Vision</p>
-              <p className="text-[10px] text-slate-500 uppercase tracking-widest">European Green Crab Detector</p>
+              <p className="text-sm font-bold tracking-widest text-text-primary uppercase flex items-center gap-2">
+                Crab Vision <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse-subtle"></span>
+              </p>
+              <p className="font-tech text-[10px] text-text-secondary uppercase tracking-[0.2em]">EU-Green-Crab Det. V2.0</p>
             </div>
           </div>
-          <a
-            href="https://github.com/Abu-Hojayfa"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="ml-auto flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-semibold text-slate-300 transition hover:border-emerald-400/30 hover:text-white"
-          >
-            <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
-            </svg>
-            Abu-Hojayfa
-          </a>
+          <div className="ml-auto flex items-center gap-4">
+            <span className="hidden sm:flex items-center gap-1.5 font-tech text-[10px] text-text-tertiary uppercase tracking-wider">
+              <Shield className="h-3 w-3 text-accent" />
+              Secure-Pipe
+            </span>
+            <a
+              href="https://github.com/Abu-Hojayfa"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 border border-border-default bg-surface-overlay px-3 py-1.5 text-[10px] font-tech uppercase tracking-wider text-text-secondary transition-colors hover:border-accent hover:text-accent"
+            >
+              SYS-OP: Abu-Hojayfa
+            </a>
+          </div>
         </div>
       </header>
 
       {/* ── Main content ── */}
-      <main className="flex flex-1 items-start justify-center px-4 py-8 sm:px-8">
-        <div className="w-full max-w-3xl space-y-5">
+      <main className="relative flex flex-1 items-start lg:items-center justify-center px-4 py-8 lg:py-12">
+        
+        {/* Central Data Panel */}
+        <div className="relative w-full max-w-4xl z-10 grid gap-6">
 
-          {/* Mode tabs */}
-          <InputTabs activeTab={activeTab} onChange={selectTab} />
+          {/* Controls Header */}
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-border-strong pb-4">
+            <div>
+              <h1 className="font-tech text-sm text-accent uppercase tracking-widest mb-1 flex items-center gap-2">
+                <Crosshair className="h-4 w-4" />
+                Detection Parameters
+              </h1>
+              <p className="text-xs text-text-secondary font-tech uppercase tracking-wider">
+                Select input feed for analysis
+              </p>
+            </div>
+            <InputTabs activeTab={activeTab} onChange={selectTab} />
+          </div>
 
           {/* ── IMAGE MODE ── */}
           {activeTab === "image" && !imageResult && (
-            <div className="rounded-2xl border border-white/8 bg-[#0c1929] p-6 space-y-5">
-              <div>
-                <h2 className="text-lg font-semibold text-white">Analyse an image</h2>
-                <p className="mt-1 text-sm text-slate-500">Upload a photo — the model will detect every European crab.</p>
-              </div>
+            <div className="animate-fade-in-up space-y-4">
               <ImageUploader file={selectedImage} onFile={chooseImage} />
               <button
                 disabled={!selectedImage || loading}
                 onClick={detect}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 px-5 py-3.5 font-semibold text-white transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+                className="group relative flex w-full items-center justify-center gap-3 border border-accent bg-accent/10 px-4 py-3 font-tech text-xs uppercase tracking-[0.2em] text-accent transition-all hover:bg-accent hover:text-surface-base disabled:cursor-not-allowed disabled:border-border-default disabled:bg-surface-raised disabled:text-text-tertiary"
               >
-                {loading ? "Detecting…" : "Detect European Crabs"}
-                <ArrowRight className="h-4 w-4" aria-hidden />
+                {loading ? "[ DETECTING... ]" : "[ INITIATE DETECTION ]"}
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden />
               </button>
             </div>
           )}
 
           {activeTab === "image" && imageResult && (
-            <div className="rounded-2xl border border-white/8 bg-[#0c1929] p-6 space-y-5">
-              <div className="flex items-center justify-between">
+            <div className="animate-fade-in-up space-y-4">
+              <div className="flex items-center justify-between border-b border-border-strong pb-3">
                 <div>
-                  <h2 className="text-lg font-semibold text-white">Detection complete</h2>
-                  <p className="text-sm text-slate-500">Bounding boxes drawn from model predictions.</p>
+                  <h2 className="font-tech text-sm font-bold text-accent uppercase tracking-widest">Analysis Complete</h2>
+                  <p className="font-tech text-[10px] text-text-secondary uppercase tracking-wider">Bounding boxes resolved</p>
                 </div>
                 <button
                   onClick={() => { reset(); setSelectedImage(null); }}
-                  className="rounded-xl border border-white/10 px-4 py-2 text-sm font-semibold text-slate-400 transition hover:border-emerald-400/40 hover:text-white"
+                  className="border border-border-default bg-surface-raised px-4 py-2 font-tech text-[10px] uppercase tracking-wider text-text-secondary transition-colors hover:border-accent hover:text-accent"
                 >
-                  New image
+                  [ RESET INPUT ]
                 </button>
               </div>
               <ImageResult result={imageResult} originalSrc={imagePreviewUrl} />
@@ -206,17 +230,7 @@ export default function App() {
 
           {/* ── VIDEO MODES ── */}
           {activeTab !== "image" && !videoResult && (
-            <div className="rounded-2xl border border-white/8 bg-[#0c1929] p-6 space-y-5">
-              <div>
-                <h2 className="text-lg font-semibold text-white">
-                  {activeTab === "local-video" ? "Track a local video" : "Track from a URL"}
-                </h2>
-                <p className="mt-1 text-sm text-slate-500">
-                  {activeTab === "local-video"
-                    ? "Each crab is tracked across frames — counted only once."
-                    : "Provide a direct public video URL to process."}
-                </p>
-              </div>
+            <div className="animate-fade-in-up space-y-4">
               {activeTab === "local-video"
                 ? <LocalVideoUploader file={selectedVideo} previewUrl={videoPreviewUrl} onFile={chooseVideo} />
                 : <VideoUrlForm value={videoUrl} onChange={(v) => { setVideoUrl(v); setError(""); }} />
@@ -224,26 +238,26 @@ export default function App() {
               <button
                 disabled={(activeTab === "local-video" ? !selectedVideo : !videoUrl.trim()) || loading}
                 onClick={submitVideo}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 px-5 py-3.5 font-semibold text-white transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+                className="group relative flex w-full items-center justify-center gap-3 border border-accent bg-accent/10 px-4 py-3 font-tech text-xs uppercase tracking-[0.2em] text-accent transition-all hover:bg-accent hover:text-surface-base disabled:cursor-not-allowed disabled:border-border-default disabled:bg-surface-raised disabled:text-text-tertiary"
               >
-                {loading ? "Processing…" : activeTab === "local-video" ? "Count Unique Crabs" : "Process Video URL"}
-                <ArrowRight className="h-4 w-4" aria-hidden />
+                {loading ? "[ PROCESSING... ]" : "[ INITIATE TRACKING ]"}
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden />
               </button>
             </div>
           )}
 
           {activeTab !== "image" && videoResult && (
-            <div className="rounded-2xl border border-white/8 bg-[#0c1929] p-6 space-y-5">
-              <div className="flex items-center justify-between">
+            <div className="animate-fade-in-up space-y-4">
+              <div className="flex items-center justify-between border-b border-border-strong pb-3">
                 <div>
-                  <h2 className="text-lg font-semibold text-white">Tracking complete</h2>
-                  <p className="text-sm text-slate-500">Processed video ready to review.</p>
+                  <h2 className="font-tech text-sm font-bold text-accent uppercase tracking-widest">Tracking Complete</h2>
+                  <p className="font-tech text-[10px] text-text-secondary uppercase tracking-wider">Video processed & encoded</p>
                 </div>
                 <button
                   onClick={() => { reset(); setSelectedVideo(null); setVideoUrl(""); }}
-                  className="rounded-xl border border-white/10 px-4 py-2 text-sm font-semibold text-slate-400 transition hover:border-emerald-400/40 hover:text-white"
+                  className="border border-border-default bg-surface-raised px-4 py-2 font-tech text-[10px] uppercase tracking-wider text-text-secondary transition-colors hover:border-accent hover:text-accent"
                 >
-                  New video
+                  [ RESET INPUT ]
                 </button>
               </div>
               <VideoResult result={videoResult} videoSrc={resultFileUrl(videoResult.videoUrl)} />
@@ -254,8 +268,8 @@ export default function App() {
           {loading && (
             <div aria-live="polite">
               <LoadingState
-                message={activeTab === "image" ? "Detecting European crabs…" : jobStatus || "Processing video…"}
-                detail={activeTab === "image" ? "Analysing your image securely." : "This may take several minutes. Keep this page open."}
+                message={activeTab === "image" ? "DETECTING GREEN CRABS..." : jobStatus ? jobStatus.toUpperCase() : "PROCESSING VIDEO..."}
+                detail={activeTab === "image" ? "Analyzing visual data feed" : "Awaiting processing queue"}
               />
             </div>
           )}
@@ -269,29 +283,10 @@ export default function App() {
         </div>
       </main>
 
-      {/* ── Compact Info Section ── */}
-      <section className="mx-auto w-full max-w-3xl px-4 sm:px-8 pb-8">
-        <div className="rounded-2xl border border-white/5 bg-[#081525] p-5 text-sm text-slate-400 space-y-3">
-          <p className="flex gap-3 text-slate-300">
-            <span className="font-semibold text-emerald-400">Security & Privacy:</span> 
-            Media is processed directly through your configured API endpoint.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 sm:gap-8">
-             <p className="flex gap-2">
-                <span className="text-emerald-400">•</span> Unique tracking across video frames
-             </p>
-             <p className="flex gap-2">
-                <span className="text-emerald-400">•</span> Live threshold adjustments
-             </p>
-             <p className="flex gap-2">
-                <span className="text-emerald-400">•</span> Direct video URLs required
-             </p>
-          </div>
-        </div>
-      </section>
-
-      <footer className="py-4 text-center text-xs text-slate-700">
-        European Crab Detector · Secure browser-to-backend pipeline
+      {/* ── Footer ── */}
+      <footer className="border-t border-border-strong bg-surface-raised py-2 px-4 flex justify-between items-center text-[10px] font-tech text-text-ghost uppercase tracking-widest z-20">
+        <span>CRAB VISION SYSTEM</span>
+        <span>STATUS: ONLINE</span>
       </footer>
     </div>
   );
