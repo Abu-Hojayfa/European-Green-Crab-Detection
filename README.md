@@ -8,9 +8,10 @@ An AI-powered full-stack web application for detecting and counting **European g
 
 ## Features
 
+- **Marine Analytics Dashboard** — A pristine, data-dense interface crafted specifically for field researchers, featuring a Slate & Teal color palette, specialized typography (`Outfit` and `Fira Code`), and extreme data resilience. Power-user accessible with global keyboard shortcuts (`Cmd+U` to upload).
 - **Image Analysis** — Upload a photo and receive bounding boxes drawn directly on the image for every European crab detected, along with confidence scores.
 - **Live Confidence Threshold** — Adjust the minimum detection confidence with a real-time slider. The canvas re-renders instantly — no re-uploads needed.
-- **All-class Detection** — European crabs are highlighted in cyan with bounding boxes. Other detected classes are listed separately in amber. 
+- **All-class Detection** — European crabs are highlighted in cyan with bounding boxes. Other detected classes are listed separately in amber, elegantly truncated for layout stability.
 - **Video Tracking** — Upload a local video file or provide a direct URL. The Python worker tracks each crab uniquely across frames (counts each crab once).
 - **Privacy-first** — Media is sent only to your own configured Roboflow endpoint. API keys live only on the backend.
 
