@@ -4,7 +4,7 @@ import StatCard from "./StatCard.jsx";
 
 const IS_EUROPEAN = (cls) => {
   const normalized = (cls || "").toLowerCase();
-  return normalized.includes("european") && normalized.includes("crab");
+  return (normalized.includes("european") || normalized.includes("green")) && normalized.includes("crab");
 };
 
 /* ─── canvas drawing ─────────────────────────────────────── */
