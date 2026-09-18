@@ -2,7 +2,10 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { CheckCircle2, ScanSearch, SlidersHorizontal, ShieldAlert } from "lucide-react";
 import StatCard from "./StatCard.jsx";
 
-const IS_EUROPEAN = (cls) => (cls || "").toLowerCase() === "european_crab";
+const IS_EUROPEAN = (cls) => {
+  const normalized = (cls || "").toLowerCase();
+  return normalized.includes("european") && normalized.includes("crab");
+};
 
 /* ─── canvas drawing ─────────────────────────────────────── */
 function drawBoxes(canvas, imageSrc, predictions) {
